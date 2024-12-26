@@ -266,6 +266,9 @@ def cancel_appointment():
         print(f"Allgemeiner Fehler: {e}")  # Debug
         return jsonify({"success": False, "message": "Fehler beim Verarbeiten der Anfrage."}), 500
 
+@app.route("/versionen")
+def versionen():
+    return render_template("versionen.html")
 
 
 # Anwendung starten
