@@ -26,12 +26,29 @@ th {
     background-color: #f2f2f2;
 }
 
-<style>
-    .fc-event-title {
-        white-space: normal !important; /* Ermöglicht Zeilenumbrüche */
-        word-wrap: break-word; /* Bricht lange Wörter */
-    }
-    .fc-event {
-        display: block;
-    }
-</style>
+.fc-event-title {
+    white-space: normal !important; /* Ermöglicht Zeilenumbrüche */
+    word-wrap: break-word; /* Bricht lange Wörter */
+}
+
+.fc-event {
+    display: block;
+}
+
+/* Footer */
+.footer {
+    position: fixed;
+    bottom: 0; /* Fixiert den Footer unten */
+    left: 50%; /* Zentriert horizontal */
+    transform: translateX(-50%); /* Korrektur für zentrierte Position */
+    text-align: center; /* Textzentrierung im Footer */
+    font-size: 12px; /* Kleine, unaufdringliche Schrift */
+    color: rgba(0, 0, 0, 0.5); /* Blasse Farbe */
+    font-family: Arial, sans-serif;
+    width: 100%; /* Breite für zentrales Layout */
+    padding: 10px 0; /* Abstand über und unter dem Text */
+    background-color: #f4f4f9; /* Optional: Hintergrundfarbe passend zur Seite */
+}
+
+
+
