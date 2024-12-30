@@ -340,6 +340,11 @@ def test_email_template():
         print(f"Fehler beim Rendern des Templates: {e}")
         return f"Fehler: {e}", 500
 
+@app.route("/versionen")
+def versionen():
+    return render_template("versionen.html")
+
+
 # Anwendung starten
 if __name__ == "__main__":
     app.run(debug=True, host="127.0.0.1", port=5001)
