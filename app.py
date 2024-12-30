@@ -6,6 +6,11 @@ from functools import wraps
 from datetime import timedelta
 from flask_mail import Mail, Message
 import os
+import re
+from dotenv import load_dotenv
+
+dotenv_path = os.path.join(os.path.dirname(__file__), '.idea/.env')
+load_dotenv(dotenv_path)
 
 app = Flask(__name__)
 
@@ -16,11 +21,22 @@ app.config['MAIL_USE_TLS'] = True
 app.config['MAIL_USERNAME'] = os.getenv('MAIL_USERNAME')
 app.config['MAIL_PASSWORD'] = os.getenv('MAIL_PASSWORD')
 app.config['MAIL_DEBUG'] = True
+app.config['MAIL_DEFAULT_SENDER'] = 'lenasappointmentcalendar@gmail.com'  # Ersetzen Sie mit Ihrer Gmail-Adresse
 
 mail = Mail(app)
 
 app.secret_key = 'dein_geheimer_schlüssel'  # Ersetze durch einen sicheren Schlüssel
 app.config['PERMANENT_SESSION_LIFETIME'] = timedelta(minutes=30)  # Sitzungslaufzeit
+
+def is_valid_email(email):
+    return re.match(r"[^@]+@[^@]+\.[^@]+", email)
+
+@app.route('/routes')
+def list_routes():
+    from flask import jsonify
+    routes = {rule.endpoint: rule.rule for rule in app.url_map.iter_rules()}
+    return jsonify(routes)
+
 
 # Middleware: Prüft, ob ein Benutzer angemeldet ist
 def login_required(f):
@@ -141,6 +157,7 @@ def login():
                 close_connection(connection)
     return render_template("login.html")
 
+# Route für die Registrierungsseite
 @app.route("/register", methods=["GET", "POST"])
 def register():
     if request.method == "POST":
@@ -176,13 +193,11 @@ def register():
 def send_email(subject, recipient, body_text=None, template=None, context=None):
     """
     Versendet eine E-Mail mit Text- oder HTML-Inhalt.
-    :param subject: Betreff der E-Mail
-    :param recipient: Empfänger-Adresse
-    :param body_text: Optionaler Text-Inhalt
-    :param template: Optionaler HTML-Vorlagenname
-    :param context: Kontext für die HTML-Vorlage (z. B. Variablen)
     """
     try:
+        print(f"Versuche, eine E-Mail zu senden an: {recipient}")  # Debug-Ausgabe
+        print(f"Betreff: {subject}")
+
         msg = Message(subject, recipients=[recipient])
 
         if body_text:
@@ -190,23 +205,13 @@ def send_email(subject, recipient, body_text=None, template=None, context=None):
 
         if template:
             # HTML-Vorlage rendern und als HTML-E-Mail anhängen
+            print(f"Verwende Template: {template}")  # Debug-Ausgabe
             msg.html = render_template(template, **context)
 
         mail.send(msg)
         print(f"E-Mail an {recipient} gesendet.")
     except Exception as e:
         print(f"Fehler beim Versenden der E-Mail: {e}")
-
-@app.route('/send_test_email')
-def send_test_email():
-    try:
-        msg = Message("Test-E-Mail", recipients=["test@example.com"])
-        msg.body = "Dies ist eine Test-E-Mail von Ihrer Flask-Anwendung."
-        mail.send(msg)
-        return "E-Mail erfolgreich gesendet!"
-    except Exception as e:
-        print(f"Fehler beim Senden der E-Mail: {e}")
-        return "E-Mail konnte nicht gesendet werden.", 500
 
 
 @app.route("/logout")
@@ -315,11 +320,26 @@ def cancel_appointment():
         print(f"Allgemeiner Fehler: {e}")  # Debug
         return jsonify({"success": False, "message": "Fehler beim Verarbeiten der Anfrage."}), 500
 
-@app.route("/versionen")
-def versionen():
-    return render_template("versionen.html")
 
+@app.route('/send_test_email')
+def send_test_email():
+    try:
+        msg = Message("Test-E-Mail", recipients=["test@example.com"])
+        msg.body = "Dies ist eine Test-E-Mail von Ihrer Flask-Anwendung."
+        mail.send(msg)
+        return "E-Mail erfolgreich gesendet!"
+    except Exception as e:
+        print(f"Fehler beim Senden der E-Mail: {e}")
+        return "E-Mail konnte nicht gesendet werden.", 500
+
+@app.route('/test_email_template')
+def test_email_template():
+    try:
+        return render_template('email_template.html', username="TestUser")
+    except Exception as e:
+        print(f"Fehler beim Rendern des Templates: {e}")
+        return f"Fehler: {e}", 500
 
 # Anwendung starten
 if __name__ == "__main__":
-    app.run(debug=True, host="0.0.0.0", port=5001)
+    app.run(debug=True, host="127.0.0.1", port=5001)
