@@ -26,7 +26,8 @@ def create_connection():
             host="sql7.freesqldatabase.com",           # Hostname (z.B. localhost)
             user="sql7751854",   # MySQL-Benutzername
             password="3E6mHi2PwD",   # MySQL-Passwort
-            database="sql7751854"  # Name der Datenbank
+            database="sql7751854",  # Name der Datenbank
+            ssl_disabled = True    #Übergangslösung
         )
         if connection.is_connected():
             print("Verbindung erfolgreich!")
