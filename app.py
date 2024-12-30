@@ -4,9 +4,21 @@ from mysql.connector import Error
 import bcrypt
 from functools import wraps
 from datetime import timedelta
-
+from flask_mail import Mail, Message
+import os
 
 app = Flask(__name__)
+
+# Flask-Mail konfigurieren
+app.config['MAIL_SERVER'] = 'smtp.gmail.com'
+app.config['MAIL_PORT'] = 587
+app.config['MAIL_USE_TLS'] = True
+app.config['MAIL_USERNAME'] = os.getenv('MAIL_USERNAME')
+app.config['MAIL_PASSWORD'] = os.getenv('MAIL_PASSWORD')
+app.config['MAIL_DEBUG'] = True
+
+mail = Mail(app)
+
 app.secret_key = 'dein_geheimer_schlüssel'  # Ersetze durch einen sicheren Schlüssel
 app.config['PERMANENT_SESSION_LIFETIME'] = timedelta(minutes=30)  # Sitzungslaufzeit
 
@@ -144,7 +156,14 @@ def register():
                 query = "INSERT INTO users (username, email, password_hash, role) VALUES (%s, %s, %s, %s)"
                 cursor.execute(query, (username, email, hashed_password.decode('utf-8'), 'user'))
                 connection.commit()
+
                 print(f"Benutzer {username} erfolgreich registriert!")
+
+                # HTML-Bestätigungs-E-Mail senden
+                subject = "Erfolgreiche Registrierung"
+                context = {"username": username}
+                send_email(subject, email, template='email_template.html', context=context)
+
                 return redirect(url_for("show_calendar"))
             except Error as e:
                 print(f"Fehler bei der Registrierung: {e}")
@@ -153,6 +172,43 @@ def register():
                 close_connection(connection)
     return render_template("register.html")
 
+
+def send_email(subject, recipient, body_text=None, template=None, context=None):
+    """
+    Versendet eine E-Mail mit Text- oder HTML-Inhalt.
+    :param subject: Betreff der E-Mail
+    :param recipient: Empfänger-Adresse
+    :param body_text: Optionaler Text-Inhalt
+    :param template: Optionaler HTML-Vorlagenname
+    :param context: Kontext für die HTML-Vorlage (z. B. Variablen)
+    """
+    try:
+        msg = Message(subject, recipients=[recipient])
+
+        if body_text:
+            msg.body = body_text
+
+        if template:
+            # HTML-Vorlage rendern und als HTML-E-Mail anhängen
+            msg.html = render_template(template, **context)
+
+        mail.send(msg)
+        print(f"E-Mail an {recipient} gesendet.")
+    except Exception as e:
+        print(f"Fehler beim Versenden der E-Mail: {e}")
+
+@app.route('/send_test_email')
+def send_test_email():
+    try:
+        msg = Message("Test-E-Mail", recipients=["test@example.com"])
+        msg.body = "Dies ist eine Test-E-Mail von Ihrer Flask-Anwendung."
+        mail.send(msg)
+        return "E-Mail erfolgreich gesendet!"
+    except Exception as e:
+        print(f"Fehler beim Senden der E-Mail: {e}")
+        return "E-Mail konnte nicht gesendet werden.", 500
+
+
 @app.route("/logout")
 def logout():
     session.pop('user_id', None)
@@ -160,14 +216,6 @@ def logout():
     print("Sitzung beendet.")
     return redirect(url_for("show_calendar"))
 
-# Middleware: Prüft, ob ein Benutzer angemeldet ist
-def login_required(f):
-    @wraps(f)
-    def decorated_function(*args, **kwargs):
-        if 'user_id' not in session:  # Prüfen, ob die Sitzung aktiv ist
-            return redirect(url_for('login'))  # Weiterleitung zur Login-Seite
-        return f(*args, **kwargs)
-    return decorated_function
 
 @app.route("/add_appointment", methods=["POST"])
 @login_required

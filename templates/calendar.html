@@ -57,27 +57,30 @@
             white-space: normal !important;
             word-wrap: break-word;
         }
+        footer {
+            text-align: center;
+            margin-top: 20px;
+            font-size: 14px;
+            color: gray;
+        }
     </style>
 </head>
 <body>
     <!-- Top-Bar -->
     <div class="top-bar">
         {% if logged_in %}
-            <h1>Willkommen, {{ username }}!</h1>
+        <h1>Willkommen, {{ username }}!</h1>
+        <div>
             <a href="/logout" class="button">Abmelden</a>
+            <a href="/versionen" class="button">Versionen</a>
+        </div>
         {% else %}
-            <h1>Lenas Online-Terminkalender</h1>
-            <div>
-                <a href="/login" class="button">Anmelden</a>
-                <a href="/versionen" class="button">Versionen</a>
-            </div>
+        <h1>Lenas Online-Terminkalender</h1>
+        <div>
+            <a href="/login" class="button">Anmelden</a>
+            <a href="/versionen" class="button">Versionen</a>
+        </div>
         {% endif %}
-
-    </div>
-
-    <!-- Footer -->
-    <div class="footer">
-    <p>Version 1.0</p>
     </div>
 
     <!-- Kalender -->
@@ -99,6 +102,11 @@
             <button type="button" onclick="submitAppointment()">Termin buchen</button>
         </form>
     </div>
+
+    <!-- Footer -->
+    <footer>
+        © 2024 Appointment Calendar. Version 1.0
+    </footer>
 
     <!-- FullCalendar JS -->
     <script src="https://cdn.jsdelivr.net/npm/fullcalendar@5.11.3/main.min.js"></script>
@@ -179,4 +187,6 @@
     </script>
 </body>
 </html>
+
+
 
