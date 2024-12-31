@@ -72,13 +72,11 @@
         <h1>Willkommen, {{ username }}!</h1>
         <div>
             <a href="/logout" class="button">Abmelden</a>
-            <a href="/versionen" class="button">Versionen</a>
         </div>
         {% else %}
         <h1>Lenas Online-Terminkalender</h1>
         <div>
             <a href="/login" class="button">Anmelden</a>
-            <a href="/versionen" class="button">Versionen</a>
         </div>
         {% endif %}
     </div>
@@ -102,6 +100,10 @@
             <button type="button" onclick="submitAppointment()">Termin buchen</button>
         </form>
     </div>
+
+    <!-- Versionen Button-->
+    <a href="/versionen" class="button">Versionen</a>
+
 
     <!-- Footer -->
     <footer>

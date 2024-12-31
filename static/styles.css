@@ -35,6 +35,49 @@ th {
     display: block;
 }
 
+/* Top-Bar */
+.top-bar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap; /* Ermöglicht das Umbruchverhalten */
+    gap: 10px; /* Abstand zwischen den Elementen */
+}
+
+.top-bar div {
+    display: flex;
+    flex-wrap: wrap; /* Buttons umbrechen, wenn der Platz knapp wird */
+    gap: 10px; /* Abstand zwischen den Buttons */
+}
+
+.button {
+    display: inline-block;
+    background-color: #F6CEF5;
+    color: white;
+    text-decoration: none;
+    padding: 10px 20px;
+    border-radius: 5px;
+    text-align: center;
+    white-space: nowrap; /* Verhindert Zeilenumbrüche im Button-Text */
+    margin-left: 0;
+}
+
+@media (max-width: 600px) {
+    .top-bar {
+        flex-direction: column; /* Elemente vertikal anordnen */
+        align-items: flex-start; /* Links ausrichten */
+    }
+    .top-bar div {
+        justify-content: flex-start; /* Buttons links ausrichten */
+        width: 100%; /* Nimmt die volle Breite ein */
+    }
+    .button {
+        width: 100%; /* Buttons nehmen die gesamte Breite ein */
+        text-align: center; /* Text im Button bleibt zentriert */
+        margin-bottom: 10px; /* Abstand zwischen Buttons */
+    }
+}
+
 /* Footer */
 .footer {
     position: fixed;

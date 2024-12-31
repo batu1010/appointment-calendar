@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>E-Mail-Adresse bestätigen</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            background-color: #f9f9f9;
+            padding: 20px;
+        }
+        .container {
+            max-width: 600px;
+            margin: 0 auto;
+            background: #ffffff;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+        h1 {
+            color: #444;
+        }
+        p {
+            margin: 10px 0;
+        }
+        .button {
+            display: inline-block;
+            margin-top: 20px;
+            padding: 10px 20px;
+            background-color: #676767;
+            color: white;
+            text-decoration: none;
+            border-radius: 5px;
+            font-size: 16px;
+        }
+        .button:hover {
+            background-color: rgba(33, 4, 46, 0.5);
+        }
+        footer {
+            margin-top: 20px;
+            text-align: center;
+            font-size: 12px;
+            color: #888;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Willkommen bei Lenas Online-Terminkalender!</h1>
+        <p>Hallo {{ username }},</p>
+        <p>Vielen Dank für Ihre Registrierung. Bitte bestätigen Sie Ihre E-Mail-Adresse, indem Sie auf den folgenden Link klicken:</p>
+        <img
+    src=https://i.giphy.com/media/v1.Y2lkPTc5MGI3NjExazRobHo4Z3FoYTFndW95aW9oNHljZm40bHRwdnJiMnNzaXQ5Njh3ZCZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/O3OJ2meHz0WcnwQwfh/giphy.gif"
+    alt="Willkommens-GIF"
+    style="max-width: 150px; height: auto; border-radius: 8px;">
+        <a href="{{ verification_link }}" class="button">E-Mail-Adresse bestätigen</a>
+        <p>Falls der Button nicht funktioniert, kopieren Sie bitte den folgenden Link in Ihren Browser:</p>
+        <p><a href="{{ verification_link }}">{{ verification_link }}</a></p>
+        <p>Aus Sicherheitsgründen ist dieser Link nur vorübergehend gültig und verfällt nach einer bestimmten Zeit.</p>
+        <footer>
+            © 2025 Lenas Online-Terminkalender. Alle Rechte vorbehalten.
+        </footer>
+    </div>
+</body>
+</html>

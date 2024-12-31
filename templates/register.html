@@ -8,6 +8,7 @@
         body {
             font-family: Arial, sans-serif;
             margin: 20px;
+            background-color: #f9f9f9;
         }
         .register-container {
             max-width: 400px;
@@ -15,11 +16,29 @@
             padding: 20px;
             border: 1px solid #ddd;
             border-radius: 5px;
+            background-color: #ffffff;
             box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
         }
         h1 {
             text-align: center;
             margin-bottom: 20px;
+        }
+        .message {
+            padding: 15px;
+            margin-bottom: 20px;
+            border-radius: 5px;
+            font-size: 14px;
+            text-align: center;
+        }
+        .success {
+            color: #155724;
+            background-color: #d4edda;
+            border: 1px solid #c3e6cb;
+        }
+        .error {
+            color: #721c24;
+            background-color: #f8d7da;
+            border: 1px solid #f5c6cb;
         }
         label {
             display: block;
@@ -49,6 +68,14 @@
 <body>
     <div class="register-container">
         <h1>Registrieren</h1>
+
+        <!-- Nachricht anzeigen -->
+        {% if message %}
+        <div class="message {{ message.type }}">
+            {{ message.text }}
+        </div>
+        {% endif %}
+
         <form action="/register" method="post">
             <label for="username">Benutzername</label>
             <input type="text" id="username" name="username" required>
@@ -64,3 +91,4 @@
     </div>
 </body>
 </html>
+

@@ -22,7 +22,6 @@ def generate_secure_token():
 dotenv_path = os.path.join(os.path.dirname(__file__), '.idea/.env')
 load_dotenv(dotenv_path)
 
-
 app = Flask(__name__)
 
 app.secret_key = 'dein_geheimer_schlüssel'  # Ersetze dies durch einen sicheren Schlüssel
@@ -35,8 +34,15 @@ app.config['MAIL_USERNAME'] = os.getenv('MAIL_USERNAME')
 app.config['MAIL_PASSWORD'] = os.getenv('MAIL_PASSWORD')
 app.config['MAIL_DEBUG'] = True
 app.config['MAIL_DEFAULT_SENDER'] = 'lenasappointmentcalendar@gmail.com'  # Ersetzen Sie mit Ihrer Gmail-Adresse
+app.config['SECRET_KEY'] = os.getenv('SECRET_KEY')
+app.config['SECURITY_PASSWORD_SALT'] = os.getenv('SECURITY_PASSWORD_SALT')
 
 mail = Mail(app)
+
+if os.getenv('FLASK_ENV') == 'production':
+    app.config['SERVER_NAME'] = os.getenv('SERVER_NAME')  # Produktionsdomain
+else:
+    app.config['SERVER_NAME'] = '127.0.0.1:5000'  # Lokale Entwicklung
 
 app.secret_key = 'dein_geheimer_schlüssel'  # Ersetze durch einen sicheren Schlüssel
 app.config['PERMANENT_SESSION_LIFETIME'] = timedelta(minutes=30)  # Sitzungslaufzeit
@@ -135,9 +141,12 @@ def get_events():
     return jsonify(events)
 
 
-# Route für die Anmeldeseite
 @app.route("/login", methods=["GET", "POST"])
 def login():
+    message = request.args.get("message")  # Nachricht aus der URL abrufen
+    if message == "success":
+        message = {"type": "success", "text": "Passwort erfolgreich zurückgesetzt! Sie können sich jetzt anmelden."}
+
     if request.method == "POST":
         email = request.form.get("email")
         password = request.form.get("password")
@@ -160,47 +169,124 @@ def login():
                         print(f"Willkommen, {username}!")
                         return redirect(url_for("show_calendar"))
                     else:
-                        return "Ungültige Anmeldedaten", 401
+                        message = {"type": "error", "text": "Ungültige Anmeldedaten."}
                 else:
-                    return "Ungültige Anmeldedaten", 401
+                    message = {"type": "error", "text": "Ungültige Anmeldedaten."}
             except Error as e:
                 print(f"Fehler beim Login: {e}")
-                return "Fehler beim Login", 500
+                message = {"type": "error", "text": "Fehler beim Login."}
             finally:
                 close_connection(connection)
-    return render_template("login.html")
+
+    return render_template("login.html", message=message)
 
 # Route für die Registrierungsseite
+@app.route("/verify_email/<token>")
+def verify_email(token):
+    email = validate_verification_token(token)
+    if not email:
+        return render_template("verification_failed.html", message={
+            "type": "error",
+            "text": "Der Verifizierungslink ist ungültig oder abgelaufen."
+        })
+
+    connection = create_connection()
+    if connection:
+        try:
+            cursor = connection.cursor()
+            query = "UPDATE users SET is_verified = %s WHERE email = %s"
+            cursor.execute(query, (True, email))
+            connection.commit()
+
+            print(f"E-Mail {email} erfolgreich verifiziert!")
+
+            return render_template("verification_success.html", email=email)
+        except Error as e:
+            print(f"Fehler bei der Verifizierung: {e}")
+            return render_template("verification_failed.html", message={
+                "type": "error",
+                "text": "Ein Fehler ist aufgetreten. Bitte versuchen Sie es später erneut."
+            })
+        finally:
+            close_connection(connection)
+    else:
+        print("Verbindung zur Datenbank fehlgeschlagen.")
+        return render_template("verification_failed.html", message={
+            "type": "error",
+            "text": "Verbindungsfehler zur Datenbank."
+        })
+
 @app.route("/register", methods=["GET", "POST"])
 def register():
     if request.method == "POST":
         username = request.form.get("username")
         email = request.form.get("email")
         password = request.form.get("password")
+
+        # Überprüfen, ob alle Felder ausgefüllt sind
+        if not username or not email or not password:
+            return render_template("register.html", message={
+                "type": "error",
+                "text": "Bitte füllen Sie alle Felder aus."
+            })
+
         hashed_password = bcrypt.hashpw(password.encode('utf-8'), bcrypt.gensalt())
 
         connection = create_connection()
         if connection:
             try:
                 cursor = connection.cursor()
-                query = "INSERT INTO users (username, email, password_hash, role) VALUES (%s, %s, %s, %s)"
-                cursor.execute(query, (username, email, hashed_password.decode('utf-8'), 'user'))
+                query = """
+                    INSERT INTO users (username, email, password_hash, role, is_verified) 
+                    VALUES (%s, %s, %s, %s, %s)
+                """
+                cursor.execute(query, (username, email, hashed_password.decode('utf-8'), 'user', False))
                 connection.commit()
 
                 print(f"Benutzer {username} erfolgreich registriert!")
 
-                # HTML-Bestätigungs-E-Mail senden
-                subject = "Erfolgreiche Registrierung"
-                context = {"username": username}
-                send_email(subject, email, template='email_template.html', context=context)
+                # Verifizierungs-E-Mail senden
+                verification_token = generate_verification_token(email)
+                verification_link = url_for('verify_email', token=verification_token, _external=True)
 
-                return redirect(url_for("show_calendar"))
+                subject = "E-Mail-Adresse bestätigen"
+                context = {"username": username, "verification_link": verification_link}
+                send_email(subject, email, template='verification_email_template.html', context=context)
+
+                return render_template("message.html", message={
+                    "type": "success",
+                    "text": "Registrierung erfolgreich! Bitte überprüfen Sie Ihre E-Mails, um Ihre Adresse zu bestätigen."
+                })
             except Error as e:
                 print(f"Fehler bei der Registrierung: {e}")
-                return "Fehler bei der Registrierung", 500
+                return render_template("register.html", message={
+                    "type": "error",
+                    "text": "Fehler bei der Registrierung. Bitte versuchen Sie es später erneut."
+                })
             finally:
                 close_connection(connection)
+
     return render_template("register.html")
+
+
+def generate_verification_token(email):
+    # Generiere einen sicheren Token für die Verifizierung
+    serializer = URLSafeTimedSerializer(app.config['SECRET_KEY'])
+    return serializer.dumps(email, salt=app.config['SECURITY_PASSWORD_SALT'])
+
+def validate_verification_token(token):
+    # Überprüfe den Verifizierungstoken
+    serializer = URLSafeTimedSerializer(app.config['SECRET_KEY'])
+    try:
+        email = serializer.loads(
+            token,
+            salt=app.config['SECURITY_PASSWORD_SALT'],
+            max_age=3600  # Token 1 Stunde gültig
+        )
+        return email
+    except Exception as e:
+        print(f"Fehler bei der Token-Validierung: {e}")
+        return None
 
 
 def send_email(subject, recipient, body_text=None, template=None, context=None):
@@ -342,7 +428,7 @@ def cancel_appointment():
 @app.route('/send_test_email')
 def send_test_email():
     try:
-        msg = Message("Test-E-Mail", recipients=["test@example.com"])
+        msg = Message("Test-E-Mail", recipients=["lenasappointmentcalendar@gmail.com"])
         msg.body = "Dies ist eine Test-E-Mail von Ihrer Flask-Anwendung."
         mail.send(msg)
         return "E-Mail erfolgreich gesendet!"
@@ -357,6 +443,15 @@ def test_email_template():
     except Exception as e:
         print(f"Fehler beim Rendern des Templates: {e}")
         return f"Fehler: {e}", 500
+
+@app.route('/verification_email_template')
+def test_verification_email_template():
+    try:
+        return render_template('verification_email_template.html', username="TestUser")
+    except Exception as e:
+        print(f"Fehler beim Rendern des Templates: {e}")
+        return f"Fehler: {e}", 500
+
 
 @app.route("/versionen")
 def versionen():
@@ -449,8 +544,8 @@ def reset_password(token):
                     cursor.execute(query, (hashed_password.decode('utf-8'), email))
                     connection.commit()
 
-                    # Erfolgsmeldung setzen
-                    message = {"type": "success", "text": "Passwort erfolgreich zurückgesetzt. Sie können sich jetzt anmelden."}
+                    # Nach erfolgreichem Zurücksetzen weiterleiten mit Nachricht
+                    return redirect(url_for('login', message="success"))
                 except Exception as e:
                     print(f"Fehler bei der Datenbankabfrage: {e}")
                     message = {"type": "error", "text": "Fehler beim Speichern des Passworts. Bitte versuchen Sie es später erneut."}
@@ -458,7 +553,6 @@ def reset_password(token):
                     close_connection(connection)
 
     return render_template("reset_password.html", message=message)
-
 
 
 # Token-Handling Funktionen
