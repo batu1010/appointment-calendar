@@ -8,11 +8,24 @@ from flask_mail import Mail, Message
 import os
 import re
 from dotenv import load_dotenv
+from itsdangerous import URLSafeTimedSerializer
+from datetime import datetime, timedelta
+import secrets
+from flask_limiter import Limiter
+from flask_limiter.util import get_remote_address
+
+
+def generate_secure_token():
+    return secrets.token_urlsafe(32)
+
 
 dotenv_path = os.path.join(os.path.dirname(__file__), '.idea/.env')
 load_dotenv(dotenv_path)
 
+
 app = Flask(__name__)
+
+app.secret_key = 'dein_geheimer_schlüssel'  # Ersetze dies durch einen sicheren Schlüssel
 
 # Flask-Mail konfigurieren
 app.config['MAIL_SERVER'] = 'smtp.gmail.com'
@@ -205,6 +218,11 @@ def send_email(subject, recipient, body_text=None, template=None, context=None):
 
         if template:
             # HTML-Vorlage rendern und als HTML-E-Mail anhängen
+            if not context:
+                context = {}
+
+            # Kontext erweitern, um die URL für statische Dateien zu unterstützen
+            context['static_url'] = url_for('static', filename='', _external=True)
             print(f"Verwende Template: {template}")  # Debug-Ausgabe
             msg.html = render_template(template, **context)
 
@@ -343,6 +361,123 @@ def test_email_template():
 @app.route("/versionen")
 def versionen():
     return render_template("versionen.html")
+
+
+limiter = Limiter(
+    get_remote_address,
+    app=app,
+    storage_uri="memory://"  # Für Entwicklung: Nutze "redis://localhost:6379" in Produktion
+)
+
+@app.route("/forgot_password", methods=["GET", "POST"])
+@limiter.limit("5 per hour")  # Limit für Passwort-Zurücksetzen
+def forgot_password():
+    message = None  # Standard-Nachricht ist leer
+    if request.method == "POST":
+        email = request.form.get("email")
+        connection = create_connection()
+        if connection:
+            try:
+                cursor = connection.cursor()
+                query = "SELECT user_id FROM users WHERE email = %s"
+                cursor.execute(query, (email,))
+                user = cursor.fetchone()
+
+                if user:
+                    token = generate_reset_token(email)
+                    expiry_time = datetime.now() + timedelta(hours=1)
+
+                    # Token in die Datenbank speichern
+                    cursor.execute(
+                        "UPDATE users SET reset_token = %s, token_expiry = %s WHERE email = %s",
+                        (token, expiry_time, email)
+                    )
+                    connection.commit()
+
+                    # Sende E-Mail
+                    reset_url = url_for('reset_password', token=token, _external=True)
+                    send_email(
+                        subject="Passwort zurücksetzen",
+                        recipient=email,
+                        body_text=f"Klicken Sie auf den folgenden Link, um Ihr Passwort zurückzusetzen: {reset_url}"
+                    )
+
+                    message = {"type": "success", "text": "E-Mail zum Zurücksetzen des Passworts wurde gesendet."}
+                else:
+                    message = {"type": "error", "text": "E-Mail wurde nicht gefunden."}
+            except Exception as e:
+                print(f"Fehler: {e}")
+                message = {"type": "error", "text": "Serverfehler. Bitte versuchen Sie es später erneut."}
+            finally:
+                close_connection(connection)
+        else:
+            message = {"type": "error", "text": "Datenbankverbindung fehlgeschlagen."}
+
+    return render_template("forgot_password.html", message=message)
+
+
+@app.route("/reset_password/<token>", methods=["GET", "POST"])
+def reset_password(token):
+    email = validate_reset_token(token)  # Token validieren
+    if not email:
+        # Abgelaufener oder ungültiger Token
+        return render_template("reset_password.html", message={
+            "type": "error",
+            "text": "Der Token ist ungültig oder abgelaufen. Bitte fordern Sie einen neuen Link an."
+        })
+
+    message = None  # Nachricht für Erfolg oder Fehler
+    if request.method == "POST":
+        # Passwort aus dem Formular abrufen
+        new_password = request.form.get("password")
+
+        # Validierung: Überprüfen, ob das Passwort leer ist
+        if not new_password:
+            message = {"type": "error", "text": "Passwort darf nicht leer sein."}
+        else:
+            # Passwort hashen
+            hashed_password = bcrypt.hashpw(new_password.encode('utf-8'), bcrypt.gensalt())
+
+            # Verbindung zur Datenbank herstellen
+            connection = create_connection()
+            if connection:
+                try:
+                    cursor = connection.cursor()
+                    query = """
+                        UPDATE users SET password_hash = %s, reset_token = NULL, token_expiry = NULL WHERE email = %s
+                    """
+                    cursor.execute(query, (hashed_password.decode('utf-8'), email))
+                    connection.commit()
+
+                    # Erfolgsmeldung setzen
+                    message = {"type": "success", "text": "Passwort erfolgreich zurückgesetzt. Sie können sich jetzt anmelden."}
+                except Exception as e:
+                    print(f"Fehler bei der Datenbankabfrage: {e}")
+                    message = {"type": "error", "text": "Fehler beim Speichern des Passworts. Bitte versuchen Sie es später erneut."}
+                finally:
+                    close_connection(connection)
+
+    return render_template("reset_password.html", message=message)
+
+
+
+# Token-Handling Funktionen
+def generate_reset_token(email):
+    serializer = URLSafeTimedSerializer(app.secret_key)
+    return serializer.dumps(email, salt='password-reset-salt')
+
+def validate_reset_token(token, expiration=900):  # 15 Minuten = 900 Sekunden
+    serializer = URLSafeTimedSerializer(app.secret_key)
+    try:
+        email = serializer.loads(
+            token,
+            salt='password-reset-salt',
+            max_age=expiration  # Ablaufzeit in Sekunden
+        )
+        return email
+    except Exception as e:
+        print(f"Token-Validierungsfehler: {e}")
+        return None
 
 
 # Anwendung starten

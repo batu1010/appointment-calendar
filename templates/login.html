@@ -44,6 +44,13 @@
         button:hover {
             background-color: #8A0886;
         }
+        .forgot-button {
+            margin-top: 10px;
+            background-color: #CC2EFA;
+        }
+        .forgot-button:hover {
+            background-color: #4C0B5F;
+        }
         .register-button {
             margin-top: 10px;
             background-color: #FE2EC8;
@@ -65,8 +72,18 @@
 
             <button type="submit">Anmelden</button>
         </form>
-        <a href="/register"><button class="register-button">Registrieren</button></a>
+
+        <!-- Button für "Passwort vergessen" -->
+        <a href="/forgot_password">
+            <button class="forgot-button">Passwort vergessen</button>
+        </a>
+
+        <!-- Button für Registrierung -->
+        <a href="/register">
+            <button class="register-button">Registrieren</button>
+        </a>
     </div>
 </body>
 </html>
+
 
