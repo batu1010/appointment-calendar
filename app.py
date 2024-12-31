@@ -24,8 +24,6 @@ load_dotenv(dotenv_path)
 
 app = Flask(__name__)
 
-app.secret_key = 'dein_geheimer_schlüssel'  # Ersetze dies durch einen sicheren Schlüssel
-
 # Flask-Mail konfigurieren
 app.config['MAIL_SERVER'] = 'smtp.gmail.com'
 app.config['MAIL_PORT'] = 587
@@ -34,18 +32,22 @@ app.config['MAIL_USERNAME'] = os.getenv('MAIL_USERNAME')
 app.config['MAIL_PASSWORD'] = os.getenv('MAIL_PASSWORD')
 app.config['MAIL_DEBUG'] = True
 app.config['MAIL_DEFAULT_SENDER'] = 'lenasappointmentcalendar@gmail.com'  # Ersetzen Sie mit Ihrer Gmail-Adresse
+
+
+# Sicherheitskonfiguration
 app.config['SECRET_KEY'] = os.getenv('SECRET_KEY')
 app.config['SECURITY_PASSWORD_SALT'] = os.getenv('SECURITY_PASSWORD_SALT')
+app.secret_key = 'dein_geheimer_schlüssel'  # Ersetze dies durch einen sicheren Schlüssel
+
+# Dynamische SERVER_NAME Konfiguration
+if os.getenv('FLASK_ENV') == 'production':
+    app.config['SERVER_NAME'] = os.getenv('SERVER_NAME_PROD')  # Produktionsdomain
+else:
+    app.config['SERVER_NAME'] = os.getenv('SERVER_NAME_TEST')  # Test-Umgebung
+
+app.config['PERMANENT_SESSION_LIFETIME'] = timedelta(minutes=30)  # Sitzungslaufzeit
 
 mail = Mail(app)
-
-if os.getenv('FLASK_ENV') == 'production':
-    app.config['SERVER_NAME'] = os.getenv('SERVER_NAME')  # Produktionsdomain
-else:
-    app.config['SERVER_NAME'] = '127.0.0.1:5000'  # Lokale Entwicklung
-
-app.secret_key = 'dein_geheimer_schlüssel'  # Ersetze durch einen sicheren Schlüssel
-app.config['PERMANENT_SESSION_LIFETIME'] = timedelta(minutes=30)  # Sitzungslaufzeit
 
 def is_valid_email(email):
     return re.match(r"[^@]+@[^@]+\.[^@]+", email)
