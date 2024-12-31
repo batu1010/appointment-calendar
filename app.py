@@ -283,7 +283,7 @@ def validate_verification_token(token):
         email = serializer.loads(
             token,
             salt=app.config['SECURITY_PASSWORD_SALT'],
-            max_age=3600  # Token 1 Stunde gültig
+            max_age=900  # Token 15min gültig
         )
         return email
     except Exception as e:
