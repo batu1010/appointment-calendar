@@ -92,7 +92,10 @@
             <input type="text" id="appointment-date" name="date" readonly>
 
             <label for="appointment-time">Uhrzeit</label>
-            <input type="time" id="appointment-time" name="time_slot" required>
+            <select id="appointment-time" name="time_slot" required>
+            <!-- Optionen werden durch JavaScript hinzugefügt -->
+            </select>
+
 
             <label for="appointment-title">Beschreibung</label>
             <textarea id="appointment-title" name="title"></textarea>
@@ -107,15 +110,31 @@
 
     <!-- Footer -->
     <footer>
-        © 2025 Lenas Appointment Calendar. Version 1.1
+        © 2025 Lenas Appointment Calendar. Version 1.1.2
     </footer>
+
 
     <!-- FullCalendar JS -->
     <script src="https://cdn.jsdelivr.net/npm/fullcalendar@5.11.3/main.min.js"></script>
     <script>
+        var calendar; // Kalender global definieren
+
         document.addEventListener('DOMContentLoaded', function () {
             var calendarEl = document.getElementById('calendar');
-            var calendar = new FullCalendar.Calendar(calendarEl, {
+
+            // Dynamisch Optionen für alle 15 Minuten erstellen
+            const timeDropdown = document.getElementById('appointment-time');
+            for (let hour = 0; hour < 24; hour++) {
+                for (let minute = 0; minute < 60; minute += 15) {
+                    const option = document.createElement('option');
+                    const formattedTime = `${String(hour).padStart(2, '0')}:${String(minute).padStart(2, '0')}`;
+                    option.value = formattedTime;
+                    option.textContent = formattedTime;
+                    timeDropdown.appendChild(option);
+                }
+            }
+
+            calendar = new FullCalendar.Calendar(calendarEl, {
                 initialView: 'dayGridMonth',
                 locale: 'de', // Für deutsche Sprache
                 events: '/get_events', // URL, um Ereignisse zu laden
@@ -144,6 +163,7 @@
                     return { domNodes: [content] };
                 }
             });
+
             calendar.render();
         });
 
@@ -161,7 +181,9 @@
             .then(data => {
                 alert(data.message);
                 if (data.success) {
-                    location.reload();
+                    // Kalender aktualisieren
+                    calendar.refetchEvents(); // Direkter Zugriff auf das globale Objekt
+                    document.getElementById('appointment-form').style.display = 'none';
                 }
             })
             .catch(error => console.error('Fehler:', error));

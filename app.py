@@ -115,11 +115,11 @@ def get_events():
             for row in rows:
                 calendar_id, date, time_slot, is_available = row
                 if is_available:
-                    print(f"Allgemeiner Eintrag: ID=calendar-{calendar_id}")  # Debug
+                    formatted_time_slot = str(time_slot)  # Zeitformat anpassen
                     events.append({
                         "id": f"calendar-{calendar_id}",
                         "title": "Termin verfügbar",
-                        "start": f"{date}T{time_slot}",
+                        "start": f"{date}T{formatted_time_slot}",
                         "color": "green"
                     })
 
@@ -129,18 +129,23 @@ def get_events():
             rows = cursor.fetchall()
             for row in rows:
                 appointment_id, date, time_slot, title = row
-                print(f"Benutzertermin: ID={appointment_id}, Datum={date}, Zeit={time_slot}")  # Debug
+                hours, remainder = divmod(time_slot.seconds, 3600)
+                minutes, seconds = divmod(remainder, 60)
+                formatted_time_slot = f"{hours:02}:{minutes:02}:{seconds:02}"  # Zeitformat anpassen
                 events.append({
-                    "id": str(appointment_id),  # ID muss rein numerisch bleiben
+                    "id": str(appointment_id),
                     "title": title,
-                    "start": f"{date}T{time_slot}",
+                    "start": f"{date}T{formatted_time_slot}",
                     "color": "blue"
                 })
+            print(f"Abgerufene Events: {events}")  # Debug-Ausgabe
         except Error as e:
             print(f"Fehler beim Abrufen der Daten: {e}")
         finally:
             close_connection(connection)
     return jsonify(events)
+
+
 
 
 @app.route("/login", methods=["GET", "POST"])
@@ -362,9 +367,10 @@ def add_appointment():
                     return jsonify({"success": False, "message": "Termin existiert bereits."}), 400
 
                 # Termin in die Datenbank einfügen
+                print(f"Füge Termin ein: user_id={user_id}, date={date}, time_slot={time_slot}, title={title}, status='confirmed'")
                 query = """
-                    INSERT INTO appointments (user_id, date, time_slot, title) 
-                    VALUES (%s, %s, %s, %s)
+                    INSERT INTO appointments (user_id, date, time_slot, title, status) 
+                    VALUES (%s, %s, %s, %s, 'confirmed')
                 """
                 cursor.execute(query, (user_id, date, time_slot, title))
                 connection.commit()
