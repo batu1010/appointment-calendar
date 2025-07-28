@@ -91,6 +91,34 @@ def close_connection(connection):
         connection.close()
         print("Verbindung geschlossen.")
 
+# Alte Einträge aus der Datenbank löschen (älter als 30 Tage nach Stattfinden)
+def delete_old_entries():
+    connection = create_connection()
+    if connection:
+        try:
+            cursor = connection.cursor()
+
+            # Alte freie Slots im Kalender löschen  !Funktion folgt noch
+           # cursor.execute("""
+           #     DELETE FROM calendar
+           #     WHERE CONCAT(date, ' ', TIME_FORMAT(time_slot, '%H:%i:%s')) < NOW() - INTERVAL 30 DAY
+           # """)
+           # print(f"Gelöschte Kalender-Slots: {cursor.rowcount}")
+
+            # Alte bestätigte Termine löschen
+            cursor.execute("""
+                DELETE FROM appointments 
+                WHERE CONCAT(date, ' ', TIME_FORMAT(time_slot, '%H:%i:%s')) < NOW() - INTERVAL 30 DAY
+            """)
+            print(f"Gelöschte Benutzer-Termine: {cursor.rowcount}")
+
+            connection.commit()
+        except Error as e:
+            print(f"Fehler beim Löschen alter Einträge: {e}")
+        finally:
+            close_connection(connection)
+
+
 @app.route("/")
 def show_calendar():
     if 'user_id' in session:  # Prüfe, ob der Benutzer angemeldet ist
@@ -102,6 +130,7 @@ def show_calendar():
 
 @app.route("/get_events")
 def get_events():
+    delete_old_entries()  # Alte Einträge automatisch bereinigen
     connection = create_connection()
     events = []
     if connection:
